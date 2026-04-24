@@ -63,6 +63,7 @@ st.markdown("""
     #MainMenu {visibility: hidden;}
     footer {visibility: hidden;}
     header {visibility: hidden;}
+    [data-testid="collapsedControl"] {visibility: visible !important;}
 
     .stApp { background-color: #f0f2f6; }
 
@@ -325,7 +326,7 @@ fbt_items = set(top3_fbt["consequent_item"].tolist())
 st.markdown(f"""
 <hr class="section-divider">
 <div class="section-header">
-    <div class="section-icon blue">🛒</div>
+    <div class="section-icon blue"></div>
     <div>
         <p class="section-title">Frequently Bought Together</p>
         <p class="section-sub">Products customers most often pair with <strong>{selected_product}</strong></p>
@@ -450,7 +451,7 @@ else:
 st.markdown(f"""
 <hr class="section-divider">
 <div class="section-header">
-    <div class="section-icon teal">🔀</div>
+    <div class="section-icon teal"></div>
     <div>
         <p class="section-title">Cross-Sell Opportunities</p>
         <p class="section-sub">Products the same customers also tend to buy</p>

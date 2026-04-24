@@ -48,18 +48,22 @@ Key decisions:
 
 ### Phase 3 — Frequent Itemset Mining & Rule Generation
 
-I applied the **Apriori algorithm** using the `mlxtend` Python library with:
-- **Minimum support: 2%** — itemsets must appear in at least 2% of all UK transactions
-- This produced **368 frequent itemsets**
+I applied the **Apriori algorithm** using the `mlxtend` Python library with an initial minimum support of 2%, which produced **368 frequent itemsets** and **155 association rules**.
 
-Association rules were then generated using a minimum **confidence threshold of 30%**, yielding **155 rules** across 14 metrics (support, confidence, lift, leverage, conviction, and more).
+During dashboard development it became clear that a 2% threshold left too many products without recommendations — many products appeared in fewer than 2% of baskets individually, so no rules were generated for them. The threshold was lowered to **1.5%** to ensure full product coverage. Because Apriori ran out of memory at the lower threshold on this dataset size, **FP-Growth** (an equivalent algorithm that uses a compressed tree structure instead of candidate generation) was used to regenerate the rules. FP-Growth produces identical rules to Apriori at the same threshold — only the computation method differs.
 
-Rules were filtered into two analytical tiers:
+The final rule set used by the app:
+- **Minimum support: 1.5%** — itemsets must appear in at least 1.5% of all UK transactions
+- **692 frequent itemsets**
+- **2,795 association rules** across 14 metrics (support, confidence, lift, leverage, conviction, and more)
+- **241 products** with full recommendation coverage
 
-| Tier | Confidence | Lift | Rules |
-|------|-----------|------|-------|
-| Strong paired rules | ≥ 50% | ≥ 2.0× | 63 |
-| Cross-sell rules | ≥ 30% | ≥ 1.5× | varies |
+Rules are applied in two tiers within the dashboard:
+
+| Tier | Ranking metric | Purpose |
+|------|---------------|---------|
+| Frequently Bought Together | Confidence (desc) | Products most reliably bought in the same basket |
+| Cross-Sell Opportunities | Lift (desc) | Products with the strongest statistical association beyond chance |
 
 The cross-sell tier added a **word-overlap heuristic**: if the antecedent and consequent product names share no significant words (words longer than 4 characters, excluding generic descriptors like "large", "small", "design"), the pair is classified as a genuine cross-category recommendation rather than just a product variant.
 
@@ -70,9 +74,9 @@ The cross-sell tier added a **word-overlap heuristic**: if the antecedent and co
 
 ### Phase 4 — Visualization
 
-I visualized the relationship between **support and confidence** across all 155 rules, with bubble size representing lift strength. This scatter plot revealed clustering patterns — most high-confidence rules sit in the lower support range (2–3%), indicating strong but niche associations rather than globally common pairings.
+I visualized the relationship between **support and confidence** across the initial 155 rules (at 2% support), with bubble size representing lift strength. This scatter plot revealed clustering patterns — most high-confidence rules sit in the lower support range (2–3%), indicating strong but niche associations rather than globally common pairings.
 
-**Support vs. Confidence Scatter Plot (All 155 Rules):**
+**Support vs. Confidence Scatter Plot (Initial 155 Rules at 2% Support):**
 
 ![Support vs Confidence Relationship](rela_btw_support_confodence.png)
 
@@ -121,7 +125,7 @@ The Charlotte Bag results were equally revealing — customers building coordina
 
 ![Support vs Confidence Relationship](rela_btw_support_confodence.png)
 
-*This scatter plot was a key analytical step — it showed that the strongest rules (largest bubbles = highest lift) cluster in the moderate support range, not at the extremes. Rules with support above 0.035 and high confidence tend to be the collection-completion behaviors.*
+*This scatter plot was a key analytical step — it showed that the strongest rules (largest bubbles = highest lift) cluster in the moderate support range, not at the extremes. Rules with support above 0.035 and high confidence tend to be the collection-completion behaviors. This initial analysis at 2% support informed the decision to lower the threshold to 1.5% for the final app, capturing more product associations while the clustering pattern remained consistent.*
 
 ### Favorite Part 2 — The Cross-Sell Detection Logic
 
@@ -168,7 +172,7 @@ Replacing Streamlit's default layout with a custom CSS styling system was deeply
 ### What I Could Have Done Better
 
 - **Temporal analysis.** The dataset spans a full year, but I treated all transactions as a single undifferentiated pool. Splitting by season (e.g., Q4 holiday vs. Q1 off-peak) would likely reveal very different association patterns and enable seasonal recommendation tuning.
-- **The support threshold.** I settled at 2% after experimenting, but this excludes a lot of potentially valid low-frequency associations. A tiered approach — strong rules at 2%, exploratory rules at 0.5% — might have surfaced meaningful niche patterns I missed.
+- **The support threshold.** I initially settled at 2%, but this left too many products without recommendations in the dashboard. Lowering to 1.5% resolved the coverage gap and expanded the rule set from 155 to 2,795 rules across 241 products. Going further — to 0.5% or lower — might surface meaningful niche patterns, but would require a more memory-efficient implementation pipeline.
 - **The cross-sell heuristic.** The word-overlap function works reasonably well on this dataset, but it's a surface-level text match. Products that share incidental words (like "RED" in "ALARM CLOCK BAKELIKE RED" and "JUMBO BAG RED RETROSPOT") can be misclassified. A product taxonomy or embedding-based approach would be more robust.
 - **Visualizations.** The scatter plot I produced is informative but minimal. A lift network graph showing which products cluster together, or a heatmap of the strongest rule pairs, would have communicated the findings more powerfully.
 
@@ -191,9 +195,11 @@ Data science is too often treated as ending at the results table. This project m
 | After cleaning | 531,167 |
 | UK transactions (invoices) | 18,668 |
 | Products in matrix | 4,134 |
-| Frequent itemsets (≥ 2% support) | 368 |
-| Association rules (≥ 30% confidence) | 155 |
-| Strong rules (≥ 50% conf, ≥ 2× lift) | 63 |
+| Frequent itemsets — initial (≥ 2% support, Apriori) | 368 |
+| Association rules — initial (≥ 30% confidence) | 155 |
+| Frequent itemsets — final (≥ 1.5% support, FP-Growth) | 692 |
+| Association rules — final (≥ 20% confidence) | 2,795 |
+| Products with full recommendation coverage | 241 |
 | Top lift achieved | 18.68× (Regency Teacup collection) |
 | Language | Python 3.x |
 | Key libraries | pandas, mlxtend, streamlit, matplotlib |

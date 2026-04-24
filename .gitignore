@@ -1,0 +1,22 @@
+# Python
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.Python
+
+# Virtual environment
+.venv/
+venv/
+env/
+
+# IDE
+.idea/
+
+# Data files (download separately — see README)
+notebooks/OnlineRetail.csv
+data/OnlineRetail_FinalUK.csv
+
+# OS
+.DS_Store
+Thumbs.db
