@@ -1,10 +1,9 @@
 # Market Basket Analysis and Product Recommendation System for Online Retail
 
-**[Your Name]**
-**[Course Name & Code]**
-**[Institution]**
-**[Instructor Name]**
-**[Date]**
+**Chikamso Ezeaku**
+**ITEC Capstone**
+**Frostburg State University**
+**April 24, 2026**
 
 ---
 
