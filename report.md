@@ -79,31 +79,27 @@ The original quantity values were binarized (presence/absence) rather than retai
 
 ### 3.3 Frequent Itemset Mining
 
-The Apriori algorithm (Agrawal & Srikant, 1994) was applied to the binary transaction matrix using the `mlxtend` Python library (Raschka, 2018). A minimum support threshold of 2% (0.02) was selected, meaning only itemsets appearing in at least 2% of all UK transactions were retained. This produced 368 frequent itemsets.
+The Apriori algorithm (Agrawal & Srikant, 1994) was applied to the binary transaction matrix using the `mlxtend` Python library (Raschka, 2018). An initial minimum support threshold of 2% (0.02) was selected, meaning only itemsets appearing in at least 2% of all UK transactions were retained. This produced 368 frequent itemsets.
 
-Support thresholds below 1% were considered during experimentation but rejected as they generated an unmanageable number of low-signal itemsets. The 2% threshold was judged to balance coverage with interpretability.
+During dashboard development, it became clear that the 2% threshold left too many products without recommendations — many products appeared in fewer than 2% of baskets individually, so no rules were generated for them. The threshold was lowered to 1.5% to ensure full product coverage. Because Apriori ran out of memory at the lower threshold on this dataset size, FP-Growth (an equivalent algorithm that uses a compressed tree structure instead of candidate generation) was used to regenerate the rules. FP-Growth produces identical rules to Apriori at the same threshold — only the computation method differs.
+
+The final rule set used by the app was generated at 1.5% minimum support, producing 692 frequent itemsets.
 
 ### 3.4 Association Rule Generation
 
-Association rules were derived from the frequent itemsets using the confidence metric with a minimum threshold of 0.3 (30%). This produced 155 rules across 14 metrics, including support, confidence, lift, leverage, and conviction.
+Association rules were derived from the frequent itemsets using the confidence metric with a minimum threshold of 0.2 (20%). This produced 2,795 rules across 14 metrics, including support, confidence, lift, leverage, and conviction, covering 241 products with full recommendation coverage.
 
 Each rule takes the form: *antecedent → consequent*, where the antecedent represents the product(s) already in the basket and the consequent represents the predicted addition.
 
-### 3.5 Rule Filtering
+### 3.5 Rule Application
 
-Raw rules were filtered into two analytical tiers:
+Rules are applied in two tiers within the dashboard:
 
-**Strong paired rules** (for the "Frequently Bought Together" use case):
-- Confidence ≥ 0.50
-- Lift ≥ 2.0
+**Frequently Bought Together:**
+Candidates are ranked by confidence (descending), with lift as a tiebreaker. The top 3 are displayed. Confidence was chosen as the primary metric because it directly answers how often customers buy both items in the same basket.
 
-This yielded 63 rules capturing high-reliability, non-trivial associations.
-
-**Cross-sell rules** (for the "Cross-Sell Opportunities" use case):
-- Confidence ≥ 0.30
-- Lift ≥ 1.5
-
-Cross-sell rules were additionally filtered using a word-overlap heuristic: if the antecedent and consequent product names share no significant words (words of more than four characters, excluding common descriptors such as "large," "small," "design," and "pattern"), the pair is classified as a cross-category cross-sell. This distinguishes within-family pairings (e.g., two teacup variants) from genuinely distinct product category pairings.
+**Cross-Sell Opportunities:**
+Candidates not already shown in the FBT section are ranked by lift (descending). A word-overlap heuristic is applied first: if the antecedent and consequent product names share no significant words (words of more than four characters, excluding common descriptors such as "large," "small," "design," and "pattern"), the pair is classified as a genuine cross-category cross-sell. This distinguishes within-family pairings (e.g., two teacup variants) from genuinely distinct product category pairings. Where no cross-category items are found, the highest-lift remaining candidates are shown instead.
 
 ---
 
@@ -117,8 +113,8 @@ The recommendation system was deployed as an interactive web application using S
 
 When a product is selected, the application filters the rules dataset for all rules where the selected product appears in the antecedent. These candidates are then split into two groups:
 
-- **Frequently Bought Together:** Rules meeting the strong threshold (confidence ≥ 0.50, lift ≥ 2.0), ranked by support then lift. The top 3 are displayed.
-- **Cross-Sell Opportunities:** Rules meeting the relaxed threshold (confidence ≥ 0.30, lift ≥ 1.5) where the consequent product is from a different category, ranked by lift. The top 3 are displayed.
+- **Frequently Bought Together:** All candidates ranked by confidence (descending), lift as tiebreaker. The top 3 are displayed with no minimum threshold cutoff, ensuring every product returns results.
+- **Cross-Sell Opportunities:** Candidates not in the FBT results, ranked by lift (descending). A word-overlap heuristic identifies genuinely cross-category items first; if none are found, the highest-lift remaining candidates are shown. Reverse rules (where the selected product appears as the consequent) are also checked to expand the candidate pool.
 
 Each recommendation card displays the product name, a business-tier badge (Bundle Opportunity, Strong Recommendation, Recommendation, or Cross-Sell), and three metric pills showing support, confidence, and lift.
 
@@ -146,9 +142,11 @@ The core analytical pipeline — data cleaning, matrix construction, Apriori exe
 | After cleaning               | 531,167 |
 | UK transactions (invoices)   | 18,668  |
 | Products in matrix           | 4,134   |
-| Frequent itemsets (≥2%)      | 368     |
-| Association rules (≥30% conf)| 155     |
-| Strong rules (≥50% conf, ≥2× lift) | 63 |
+| Frequent itemsets — initial (≥2% support, Apriori) | 368 |
+| Association rules — initial (≥30% confidence) | 155 |
+| Frequent itemsets — final (≥1.5% support, FP-Growth) | 692 |
+| Association rules — final (≥20% confidence) | 2,795 |
+| Products with full recommendation coverage | 241 |
 
 ### 5.2 Top Findings
 
@@ -189,7 +187,7 @@ The cross-sell detection heuristic, while simple, performs reasonably well on th
 
 ### 6.2 Limitations
 
-**Support threshold sensitivity.** The 2% minimum support threshold, while practical, excludes many valid low-frequency associations. In a long-tail product catalog, meaningful niche pairings may exist below this threshold.
+**Support threshold sensitivity.** The initial 2% minimum support threshold left too many products without recommendations in the dashboard. Lowering to 1.5% resolved the coverage gap and expanded the rule set from 155 to 2,795 rules across 241 products. Going further — to 0.5% or lower — might surface meaningful niche patterns, but would require a more memory-efficient implementation pipeline.
 
 **UK-only scope.** Restricting to UK transactions was analytically justified but limits generalizability. Purchasing behavior in other markets may reveal different associations.
 
@@ -205,7 +203,7 @@ Future iterations could incorporate collaborative filtering or neural embedding 
 
 ## 7. Conclusion
 
-This project demonstrates that market basket analysis remains a practical and interpretable technique for extracting purchasing behavior insights from transactional retail data. Using the Apriori algorithm on 18,668 UK transactions, 63 strong association rules were identified, revealing both collection-completion behavior and genuine cross-category purchasing patterns. These findings were operationalized into a Streamlit dashboard that enables non-technical business users to query recommendations interactively. Collaborative development with Claude (Anthropic) contributed the dashboard's visual architecture and cross-sell detection logic, illustrating how AI-assisted development can accelerate the delivery of data products. The resulting system bridges exploratory data analysis and practical business application, offering a template for retail recommendation systems grounded in real customer behavior.
+This project demonstrates that market basket analysis remains a practical and interpretable technique for extracting purchasing behavior insights from transactional retail data. Using the Apriori algorithm on 18,668 UK transactions, 2,795 association rules were identified across 241 products, revealing both collection-completion behavior and genuine cross-category purchasing patterns. These findings were operationalized into a Streamlit dashboard that enables non-technical business users to query recommendations interactively. Collaborative development with Claude (Anthropic) contributed the dashboard's visual architecture and cross-sell detection logic, illustrating how AI-assisted development can accelerate the delivery of data products. The resulting system bridges exploratory data analysis and practical business application, offering a template for retail recommendation systems grounded in real customer behavior.
 
 ---
 
