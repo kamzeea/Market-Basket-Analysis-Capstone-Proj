@@ -224,5 +224,3 @@ Han, J., Pei, J., & Kamber, M. (2011). *Data mining: Concepts and techniques* (3
 Raschka, S. (2018). MLxtend: Providing machine learning and data science utilities and extensions to Python's scientific computing stack. *Journal of Open Source Software, 3*(24), 638. https://doi.org/10.21105/joss.00638
 
 ---
-
-*Word count: approximately 2,100 words (body sections 1–7, excluding abstract, tables, and references)*
